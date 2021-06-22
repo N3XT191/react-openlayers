@@ -10,12 +10,15 @@ import GPX from "ol/format/GPX";
 import Feature from "ol/Feature";
 
 import { Circle as CircleStyle, Fill, Stroke, Style, Text } from "ol/style";
-import Point from "ol/geom/Point";
+import LayerGroup from "ol/layer/Group";
+import LayerSwitcher from "ol-layerswitcher";
+import { BaseLayerOptions, GroupLayerOptions } from "ol-layerswitcher";
 
 import Overlay from "ol/Overlay";
 import Geolocation from "ol/Geolocation";
 
 import "ol/ol.css";
+import "ol-layerswitcher/dist/ol-layerswitcher.css";
 
 import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
 import { Cluster } from "ol/source";
@@ -68,6 +71,11 @@ var benchClusters = new VectorLayer({
 		}
 		return style;
 	},
+	title: "Benches",
+});
+const featureLayers = new LayerGroup({
+	title: "Layers",
+	layers: [benchClusters],
 });
 
 let layers = [
@@ -132,7 +140,7 @@ let layers = [
 			type: "wmts",
 		}),
 	}),
-	benchClusters,
+	featureLayers,
 ];
 var projection = new Projection({
 	code: "EPSG:3857",
@@ -148,6 +156,10 @@ var popup = new Overlay({
 	positioning: "bottom-center",
 	stopEvent: false,
 	id: "popup",
+});
+const layerSwitcher = new LayerSwitcher({
+	reverse: true,
+	groupSelectStyle: "group",
 });
 
 class PublicMap extends Component {
@@ -169,6 +181,7 @@ class PublicMap extends Component {
 			controls: defaultControls().extend([new ScaleLine()]),
 		});
 		this.olmap.addOverlay(popup);
+		this.olmap.addControl(layerSwitcher);
 		this.geolocation = new Geolocation({
 			// enableHighAccuracy must be set to true to have the heading value.
 			trackingOptions: {
