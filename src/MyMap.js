@@ -10,49 +10,29 @@ import GPX from "ol/format/GPX";
 import Feature from "ol/Feature";
 
 import { Circle as CircleStyle, Fill, Stroke, Style, Text } from "ol/style";
-import Point from "ol/geom/Point";
+import LayerGroup from "ol/layer/Group";
+import LayerSwitcher from "ol-layerswitcher";
+import { BaseLayerOptions, GroupLayerOptions } from "ol-layerswitcher";
 
 import Overlay from "ol/Overlay";
 import Geolocation from "ol/Geolocation";
 
 import "ol/ol.css";
+import "ol-layerswitcher/dist/ol-layerswitcher.css";
 
 import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
 import { Cluster } from "ol/source";
 
 var pointStyles = {
-	water: (size) => {
+	benches: (size) => {
 		return new Style({
 			image: new CircleStyle({
 				fill: new Fill({
-					color: `rgba(51, 153, 204,${size > 1 ? 1.0 : 0.6})`,
+					color: `rgba(40, 240, 40,${size > 1 ? 1.0 : 0.6})`,
 				}),
 				radius: 10,
 				stroke: new Stroke({
-					color: "rgb(31, 93, 144)",
-					width: 2,
-				}),
-			}),
-			text:
-				size > 1
-					? new Text({
-							text: size.toString(),
-							fill: new Fill({
-								color: "#fff",
-							}),
-					  })
-					: undefined,
-		});
-	},
-	fireplace: (size) => {
-		return new Style({
-			image: new CircleStyle({
-				fill: new Fill({
-					color: `rgba(243, 240, 40,${size > 1 ? 1.0 : 0.6})`,
-				}),
-				radius: 10,
-				stroke: new Stroke({
-					color: "#FF6512",
+					color: "#069915",
 					width: 2,
 				}),
 			}),
@@ -69,50 +49,33 @@ var pointStyles = {
 	},
 };
 
-const waterSource = new VectorSource({
-	url: "water.gpx",
-	format: new GPX(),
-});
-const fireplaceSource = new VectorSource({
-	url: "fireplace.gpx",
+const benchSource = new VectorSource({
+	url: "benches.gpx",
 	format: new GPX(),
 });
 
-var waterClusterSource = new Cluster({
+var benchClusterSource = new Cluster({
 	distance: 50,
-	source: waterSource,
-});
-var fireplaceClusterSource = new Cluster({
-	distance: 50,
-	source: fireplaceSource,
+	source: benchSource,
 });
 
-var waterStyleCache = {};
-var waterClusters = new VectorLayer({
-	source: waterClusterSource,
+var benchStyleCache = {};
+var benchClusters = new VectorLayer({
+	source: benchClusterSource,
 	style: function (feature) {
 		var size = feature.get("features").length;
-		var style = waterStyleCache[size];
+		var style = benchStyleCache[size];
 		if (!style) {
-			style = pointStyles.water(size);
-			waterStyleCache[size] = style;
+			style = pointStyles.benches(size);
+			benchStyleCache[size] = style;
 		}
 		return style;
 	},
+	title: "Benches",
 });
-
-var fireplaceStyleCache = {};
-var fireplaceClusters = new VectorLayer({
-	source: fireplaceClusterSource,
-	style: function (feature) {
-		var size = feature.get("features").length;
-		var style = fireplaceStyleCache[size];
-		if (!style) {
-			style = pointStyles.fireplace(size);
-			fireplaceStyleCache[size] = style;
-		}
-		return style;
-	},
+const featureLayers = new LayerGroup({
+	title: "Layers",
+	layers: [benchClusters],
 });
 
 let layers = [
@@ -177,8 +140,7 @@ let layers = [
 			type: "wmts",
 		}),
 	}),
-	waterClusters,
-	fireplaceClusters,
+	featureLayers,
 ];
 var projection = new Projection({
 	code: "EPSG:3857",
@@ -194,6 +156,10 @@ var popup = new Overlay({
 	positioning: "bottom-center",
 	stopEvent: false,
 	id: "popup",
+});
+const layerSwitcher = new LayerSwitcher({
+	reverse: true,
+	groupSelectStyle: "group",
 });
 
 class PublicMap extends Component {
@@ -215,6 +181,7 @@ class PublicMap extends Component {
 			controls: defaultControls().extend([new ScaleLine()]),
 		});
 		this.olmap.addOverlay(popup);
+		this.olmap.addControl(layerSwitcher);
 		this.geolocation = new Geolocation({
 			// enableHighAccuracy must be set to true to have the heading value.
 			trackingOptions: {
@@ -260,6 +227,8 @@ class PublicMap extends Component {
 			let center = this.olmap.getView().getCenter();
 			let zoom = this.olmap.getView().getZoom();
 			console.log(zoom);
+
+			console.log(benchSource.getFeatures().length);
 		});
 
 		this.olmap.on("click", function (evt) {
